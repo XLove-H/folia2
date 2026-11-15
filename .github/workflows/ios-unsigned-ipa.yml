@@ -1,0 +1,74 @@
+name: Build unsigned IPA
+
+# 在 GitHub 网页上手动点一下就能跑（Actions -> 这个 workflow -> Run workflow）
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # 用 macos-latest 而不是写死 macos-14：旧镜像会被 GitHub 下线，latest 始终可用
+    runs-on: macos-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 环境信息
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcode-select -p
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen || true
+
+      # 主路线：生成 .xcodeproj 后 xcodebuild 编译，再手工打包 Payload。
+      - name: 路线 A：XcodeGen + xcodebuild
+        id: build_a
+        continue-on-error: true
+        run: |
+          set -x
+          xcodegen generate --spec project.yml
+          xcodebuild \
+            -project Folia.xcodeproj \
+            -scheme Folia \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+          APP="build/Build/Products/Release-iphoneos/Folia.app"
+          test -d "$APP" || { echo "找不到 $APP"; find build -name '*.app' -maxdepth 6 || true; exit 1; }
+          rm -rf Payload Folia-unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload Folia-unsigned.ipa
+
+      # 备用路线：路线 A 任何一步失败时自动接管，不需要 XcodeGen / .xcodeproj。
+      - name: 路线 B：swiftc 备用编译
+        if: steps.build_a.outcome != 'success'
+        run: |
+          chmod +x scripts/build-ipa-swiftc.sh
+          ./scripts/build-ipa-swiftc.sh
+
+      - name: 校验产物
+        run: |
+          test -f Folia-unsigned.ipa
+          ls -lh Folia-unsigned.ipa
+          unzip -l Folia-unsigned.ipa | head -20
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Folia-unsigned-ipa
+          path: Folia-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
