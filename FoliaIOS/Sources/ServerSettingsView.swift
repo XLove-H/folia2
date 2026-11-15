@@ -72,8 +72,10 @@ struct ServerSettingsView: View {
             .navigationTitle(isFirstRun ? "连接 Folia" : "设置")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !isFirstRun {
-                    ToolbarItem(placement: .cancellationAction) {
+                // 注意：if 必须写在 ToolbarItem 的内容里（ViewBuilder，iOS 13+）；
+                // 写在 .toolbar 直接层会命中 ToolbarContentBuilder 的 buildIf，那是 iOS 16+ API。
+                ToolbarItem(placement: .cancellationAction) {
+                    if !isFirstRun {
                         Button("关闭") { dismiss() }
                     }
                 }
