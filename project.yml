@@ -1,0 +1,50 @@
+# XcodeGen 工程描述：运行 `xcodegen generate` 后生成 Folia.xcodeproj
+# 用 XcodeGen 而不是把 .xcodeproj 提交进仓库，是为了让工程文件可读、可 diff、不会因为 Xcode 版本差异损坏。
+name: Folia
+
+options:
+  minimumXcodeGenVersion: "2.35.0"
+  bundleIdPrefix: cn.foliaios
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    CLANG_ENABLE_MODULES: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  Folia:
+    type: application
+    platform: iOS
+    sources:
+      - path: FoliaIOS/Sources
+      - path: FoliaIOS/Resources/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_NAME: Folia
+        PRODUCT_BUNDLE_IDENTIFIER: cn.foliaios.app
+        INFOPLIST_FILE: Support/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # 免费 Apple ID 签名时保持 Automatic；CI 里会用命令行参数覆盖成不签名
+        CODE_SIGN_STYLE: Automatic
+
+schemes:
+  Folia:
+    build:
+      targets:
+        Folia: all
+    run:
+      config: Debug
+    archive:
+      config: Release
